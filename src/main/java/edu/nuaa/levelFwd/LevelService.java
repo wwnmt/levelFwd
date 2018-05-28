@@ -11,7 +11,6 @@ public interface LevelService {
      */
     List<HostInfo> getHostInfos();
 
-
     /**
      * Adds a new Host informations.
      */
@@ -22,6 +21,11 @@ public interface LevelService {
      * Gets an existing Host informations.
      */
     HostInfo getHostInfo(HostId hostId);
+
+    /**
+     * Set an existing Host informations.
+     */
+    void setHostInfo(HostId hostId, HostInfo info);
 
     /**
      *  Gets an existing Host level by hostId

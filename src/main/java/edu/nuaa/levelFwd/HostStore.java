@@ -1,6 +1,7 @@
 
 package edu.nuaa.levelFwd;
 
+import org.onlab.packet.MacAddress;
 import org.onosproject.net.HostId;
 import org.onosproject.store.Store;
 
@@ -24,6 +25,11 @@ public interface HostStore extends Store {
      * Gets an existing Host infomations.
      */
     HostInfo getHostInfoById(HostId hostId);
+
+    /**
+     * Set an existing Host infomations.
+     */
+    void setHostInfoById(HostId hostId, HostInfo info);
 
     /**
      *  Gets an existing Host level by hostId

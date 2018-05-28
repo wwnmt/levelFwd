@@ -55,7 +55,7 @@ public class LevelWebResource extends AbstractWebResource {
             node.put("vlanId", info.vlanId().toString());
             node.put("deviceId", info.deviceId().toString());
             node.put("mac", info.srcMAC().toString());
-            node.put("ip", info.rule().level().getIp().toString());
+            node.put("ip", info.Ip().toString());
             node.put("levels", info.rule().toString());
 
             arrayNode.add(node);
@@ -91,7 +91,11 @@ public class LevelWebResource extends AbstractWebResource {
     @Path("host/down/{id}")
     public Response downLevelById(@PathParam("id") String id) throws URISyntaxException {
         HostInfo info = get(LevelService.class).getHostInfo(HostId.hostId(id + "/None"));
+        if (info == null) {
+            return Response.notModified().build();
+        }
         info.rule().downLevel();
+        get(LevelService.class).setHostInfo(HostId.hostId(id + "/None"), info);
         return Response.noContent().build();
     }
 
@@ -99,7 +103,11 @@ public class LevelWebResource extends AbstractWebResource {
     @Path("host/up/{id}")
     public Response upLevelById(@PathParam("id") String id) throws URISyntaxException {
         HostInfo info = get(LevelService.class).getHostInfo(HostId.hostId(id + "/None"));
+        if (info == null) {
+            return Response.notModified().build();
+        }
         info.rule().upLevel();
+        get(LevelService.class).setHostInfo(HostId.hostId(id + "/None"), info);
         return Response.noContent().build();
     }
 

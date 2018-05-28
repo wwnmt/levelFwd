@@ -41,6 +41,7 @@ public class InternalNeighbourMessageHandler implements NeighbourMessageHandler 
                 if (context.target().equals(IpAddress.valueOf("10.0.0.254"))) {
                     HostId host = HostId.hostId(context.srcMac(), context.vlan());
                     context.reply(levelManager.getGatewayMacByHostId(host));
+                    return;
                 }
 
                 IpAddress target = context.target();

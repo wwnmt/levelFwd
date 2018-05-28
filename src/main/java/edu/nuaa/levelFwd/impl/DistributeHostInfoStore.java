@@ -43,8 +43,8 @@ public class DistributeHostInfoStore extends AbstractStore implements HostStore 
     private final int defaultFlowMaxPriority = 30000;
 
     private ConsistentMap<HostId, HostInfo> hostSet; // Host信息记录
-    private ConsistentMap<HostId, Set<String>> hostToService; // 主机可以访问的服务类型
-    private ConsistentMap<HostId, LevelRule> hostToLevel; // 主机对应的安全级别
+//    private ConsistentMap<HostId, Set<String>> hostToService; // 主机可以访问的服务类型
+//    private ConsistentMap<HostId, LevelRule> hostToLevel; // 主机对应的安全级别
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected StorageService storageService;
@@ -71,25 +71,26 @@ public class DistributeHostInfoStore extends AbstractStore implements HostStore 
                 .withPurgeOnUninstall()
                 .build();
 
-        hostToService = storageService.<HostId, Set<String>>consistentMapBuilder()
-                .withSerializer(Serializer.using(serializer.build()))
-                .withName("host-service-set")
-                .withApplicationId(appId)
-                .withPurgeOnUninstall()
-                .build();
-
-        hostToLevel = storageService.<HostId, LevelRule>consistentMapBuilder()
-                .withSerializer(Serializer.using(serializer.build()))
-                .withName("host-levelrule-set")
-                .withApplicationId(appId)
-                .withPurgeOnUninstall()
-                .build();
+//        hostToService = storageService.<HostId, Set<String>>consistentMapBuilder()
+//                .withSerializer(Serializer.using(serializer.build()))
+//                .withName("host-service-set")
+//                .withApplicationId(appId)
+//                .withPurgeOnUninstall()
+//                .build();
+//
+//        hostToLevel = storageService.<HostId, LevelRule>consistentMapBuilder()
+//                .withSerializer(Serializer.using(serializer.build()))
+//                .withName("host-levelrule-set")
+//                .withApplicationId(appId)
+//                .withPurgeOnUninstall()
+//                .build();
 
         log.info("Started");
     }
 
     @Deactivate
     public void deactive() {
+        clearHosts();
         log.info("Stopped");
     }
 
@@ -104,8 +105,8 @@ public class DistributeHostInfoStore extends AbstractStore implements HostStore 
     public void addHostInfo(HostInfo host) {
 
         hostSet.putIfAbsent(host.id(), host);
-        hostToLevel.putIfAbsent(host.id(), host.rule());
-        hostToService.putIfAbsent(host.id(), host.rule().service());
+//        hostToLevel.putIfAbsent(host.id(), host.rule());
+//        hostToService.putIfAbsent(host.id(), host.rule().service());
     }
 
     @Override
@@ -119,13 +120,15 @@ public class DistributeHostInfoStore extends AbstractStore implements HostStore 
     }
 
     @Override
+    public void setHostInfoById(HostId hostId, HostInfo info) {
+        hostSet.put(hostId, info);
+    }
+
+    @Override
     public LevelRule getHostLevelById(HostId hostId){
-        Versioned<LevelRule> level = hostToLevel.get(hostId);
-        if (level != null) {
-            return level.value();
-        } else {
-            return null;
-        }
+        if (hostSet.get(hostId) != null)
+            return hostSet.get(hostId).value().rule();
+        return new LevelRule();
     }
 
     @Override
@@ -136,7 +139,7 @@ public class DistributeHostInfoStore extends AbstractStore implements HostStore 
     @Override
     public void clearHosts() {
         hostSet.clear();
-        hostToService.clear();
-        hostToLevel.clear();
+//        hostToService.clear();
+//        hostToLevel.clear();
     }
 }

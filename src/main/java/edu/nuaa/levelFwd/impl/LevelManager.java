@@ -228,8 +228,12 @@ public class LevelManager implements LevelService {
 
         Set<IpAddress> addrs = host.ipAddresses();
         if (addrs.isEmpty()) {
-            builder.setIp(IpAddress.valueOf("66.66.66.66"));
+            builder.setIp(IpAddress.valueOf("0.0.0.0"));
         } else {
+            if (addrInMiddleBox(host.ipAddresses().iterator().next()))
+            {
+                return;
+            }
             builder.setIp(host.ipAddresses().iterator().next());
         }
 
@@ -356,14 +360,12 @@ public class LevelManager implements LevelService {
         }
     }
 
-    private class InternalPacketListener implements PacketProcessor {
-
-        // Ipv4
-        private boolean addrInMiddleBox(IpAddress addr) {
-            for (Level level: Level.values()){
-                if (addr.equals(level.getIp()))
-                    return true;
-            }
+    // Ipv4
+    private boolean addrInMiddleBox(IpAddress addr) {
+        for (Level level: Level.values()){
+            if (addr.equals(level.getIp()))
+                return true;
+        }
 //            IpAddress[] middleboxes = new IpAddress[]{
 //                    IpAddress.valueOf("10.1.0.254"),
 //                    IpAddress.valueOf("10.2.0.254"),
@@ -376,15 +378,15 @@ public class LevelManager implements LevelService {
 //                    return true;
 //                }
 //            }
-            return false;
-        }
+        return false;
+    }
 
-        // MAC
-        private boolean addrInMiddleBox(MacAddress addr) {
-            for (Level level: Level.values()){
-                if (addr.equals(level.getMac()))
-                    return true;
-            }
+    // MAC
+    private boolean addrInMiddleBox(MacAddress addr) {
+        for (Level level: Level.values()){
+            if (addr.equals(level.getMac()))
+                return true;
+        }
 //            MacAddress[] middleboxes = new MacAddress[]{
 //                    MacAddress.valueOf("00:00:00:00:01:00"),
 //                    MacAddress.valueOf("00:00:00:01:02:00"),
@@ -395,44 +397,59 @@ public class LevelManager implements LevelService {
 //                    return true;
 //                }
 //            }
-            return false;
-        }
+        return false;
+    }
+
+    private class InternalPacketListener implements PacketProcessor {
 
         /**
          * Host IpAddress NAT
          * direction == 1 10.0.0.* -> 10.1.0.*
          * direction == 2 10.1.0.* -> 10.0.0.*
          */
-        private IpAddress nat(IpAddress addr, int direction) {
-            IpAddress[] src = new IpAddress[]{
-                    IpAddress.valueOf("10.0.0.1"),
-                    IpAddress.valueOf("10.0.0.2"),
-                    IpAddress.valueOf("10.0.0.3"),
-                    IpAddress.valueOf("10.0.0.4"),
-                    IpAddress.valueOf("10.0.0.5"),
-                    IpAddress.valueOf("10.0.0.6"),
-            };
+        private IpAddress nat(IpAddress origin, MacAddress addr, int direction) {
+//            IpAddress[] src = new IpAddress[]{
+//                    IpAddress.valueOf("10.0.0.1"),
+//                    IpAddress.valueOf("10.0.0.2"),
+//                    IpAddress.valueOf("10.0.0.3"),
+//                    IpAddress.valueOf("10.0.0.4"),
+//                    IpAddress.valueOf("10.0.0.5"),
+//                    IpAddress.valueOf("10.0.0.6"),
+//            };
+//
+//            IpAddress[] dst = new IpAddress[]{
+//                    IpAddress.valueOf("10.1.0.1"),
+//                    IpAddress.valueOf("10.1.0.2"),
+//                    IpAddress.valueOf("10.1.0.3"),
+//                    IpAddress.valueOf("10.1.0.4"),
+//                    IpAddress.valueOf("10.1.0.5"),
+//                    IpAddress.valueOf("10.1.0.6"),
+//            };
 
-            IpAddress[] dst = new IpAddress[]{
-                    IpAddress.valueOf("10.1.0.1"),
-                    IpAddress.valueOf("10.1.0.2"),
-                    IpAddress.valueOf("10.1.0.3"),
-                    IpAddress.valueOf("10.1.0.4"),
-                    IpAddress.valueOf("10.1.0.5"),
-                    IpAddress.valueOf("10.1.0.6"),
-            };
+            byte[] srcIp = origin.toOctets();
+            HostInfo info = hostStore.getHostInfoById(HostId.hostId(addr));
 
             if (direction == 1) {
-                for (int i = 0; i < src.length; ++i) {
-                    if (src[i].equals(addr)) {
-                        return dst[i];
-                    }
+//                for (int i = 0; i < src.length; ++i) {
+//                    if (src[i].equals(addr)) {
+//                        return dst[i];
+//                    }
+//                }
+
+                if (info != null) {
+                    IpAddress ip = info.rule().level().getIp();
+                    srcIp[1] = ip.toOctets()[1];
+                    return IpAddress.valueOf(IpAddress.Version.INET, srcIp);
                 }
             } else {
-                for (int i = 0; i < dst.length; ++i) {
-                    if (dst[i].equals(addr)) {
-                        return src[i];
-                    }
+//                for (int i = 0; i < dst.length; ++i) {
+//                    if (dst[i].equals(addr)) {
+//                        return src[i];
+//                    }
+//                }
+                if (info != null) {
+                    srcIp[1] = 0;
+                    return IpAddress.valueOf(IpAddress.Version.INET, srcIp);
                 }
             }
             log.info("NAT: " + addr.toString() + " " + direction + " ERROR! ");
@@ -650,8 +667,6 @@ public class LevelManager implements LevelService {
                 return ;
             }
 
-            storeFirstPktToMysqlDatabase(ethPkt);
-
             // Bail if this is deemed to be a control packet.
             if (isControlPacket(ethPkt)) {
                 return;
@@ -672,8 +687,12 @@ public class LevelManager implements LevelService {
             }
 
             // IpAddress NAT when the packet arrived the edge OVS
+            // FIXME: Edge OVS define.
             if (pkt.receivedFrom().deviceId().equals(DeviceId.deviceId("of:0000000000010201"))) {
+
+
                 if (pkt.parsed().getEtherType() == Ethernet.TYPE_IPV4) {
+
                     Ethernet ethpkt = pkt.parsed();
                     IPv4 iPv4 = (IPv4) ethpkt.getPayload();
 
@@ -684,6 +703,7 @@ public class LevelManager implements LevelService {
                     // DST 10.1.0.* -> 10.0.0.*
                     // SRC 10.*.0.254 -> 10.0.0.254
                     if (addrInMiddleBox(ethpkt.getSourceMAC())) {
+                        storeFirstPktToMysqlDatabase(ethPkt);
                         // Don't handle OSPF Packet.
                         if (iPv4.getProtocol() == 89) {
                             return;
@@ -700,7 +720,7 @@ public class LevelManager implements LevelService {
                                     topologyService.getPaths(topologyService.currentTopology(),
                                                              pkt.receivedFrom().deviceId(),
                                                              dst.location().deviceId());
-                            if (paths.isEmpty()) {
+                            if (!paths.isEmpty()) {
                                 Path path = pickForwardPathIfPossible(paths, pkt.receivedFrom().port());
                                 if (path == null) {
                                     log.warn("Don't know where to go from here {} for {} -> {}",
@@ -720,14 +740,15 @@ public class LevelManager implements LevelService {
                             return;
                         }
 
-                        moddst = nat(IpAddress.valueOf(iPv4.getDestinationAddress()), 2).toOctets();
+                        moddst = nat(IpAddress.valueOf(iPv4.getDestinationAddress()), ethpkt.getDestinationMAC(), 2).toOctets();
+//                        moddst = nat(IpAddress.valueOf(iPv4.getDestinationAddress()), 2).toOctets();
                         if (addrInMiddleBox(IpAddress.valueOf(iPv4.getSourceAddress()))) {
                             // modsrc = nat2(IpAddress.valueOf(iPv4.getSourceAddress()), 2).toOctets();
                             modsrc = level.level().natByLevel(2).toOctets();
                         }
                         installRule(context, context.inPacket().parsed(), modsrc, moddst, port);
 
-                        iPv4.setDestinationAddress(nat(IpAddress.valueOf(iPv4.getDestinationAddress()), 2).toString());
+                        iPv4.setDestinationAddress(nat(IpAddress.valueOf(iPv4.getDestinationAddress()), ethpkt.getDestinationMAC(), 2).toString());
                         // If SRC is MiddleBox then change ip SRC.
                         if (addrInMiddleBox(IpAddress.valueOf(iPv4.getSourceAddress()))) {
                             //iPv4.setSourceAddress(nat2(IpAddress.valueOf(iPv4.getSourceAddress()), 2).toString());
@@ -746,6 +767,8 @@ public class LevelManager implements LevelService {
                         // SRC: 10.0.0.* -> 10.1.0.*
                         // DST: 10.0.0.254 -> 10.*.0.254
                     } else if (addrInMiddleBox(ethpkt.getDestinationMAC())) {
+                        storeFirstPktToMysqlDatabase(ethPkt);
+
                         // If DST is MiddleBox then change ip DST.
                         PortNumber port = dst.location().port();
 
@@ -757,7 +780,8 @@ public class LevelManager implements LevelService {
                             log.error("Can't find host's level");
                             return;
                         }
-                        modsrc = nat(IpAddress.valueOf(iPv4.getSourceAddress()), 1).toOctets();
+                        modsrc = nat(IpAddress.valueOf(iPv4.getSourceAddress()), ethpkt.getSourceMAC(), 1).toOctets();
+//                        modsrc = nat(IpAddress.valueOf(iPv4.getSourceAddress()), 1).toOctets();
                         if (IpAddress.valueOf(iPv4.getDestinationAddress()).equals(IpAddress.valueOf("10.0.0.254"))) {
                             //moddst = nat2(IpAddress.valueOf(iPv4.getSourceAddress()), 1).toOctets();
                             moddst = level.level().natByLevel(1).toOctets();
@@ -768,7 +792,7 @@ public class LevelManager implements LevelService {
                             //iPv4.setDestinationAddress(nat2(IpAddress.valueOf(iPv4.getSourceAddress()), 1).toString());
                             iPv4.setDestinationAddress(level.level().natByLevel(1).toString());
                         }
-                        iPv4.setSourceAddress(nat(IpAddress.valueOf(iPv4.getSourceAddress()), 1).toString());
+                        iPv4.setSourceAddress(nat(IpAddress.valueOf(iPv4.getSourceAddress()), ethpkt.getSourceMAC(), 1).toString());
                         iPv4.resetChecksum();
 
                         ethpkt.setPayload(iPv4);
@@ -850,6 +874,7 @@ public class LevelManager implements LevelService {
     }
 
     public MacAddress getGatewayMacByHostId(HostId hostId) {
+        log.info("HOSTID: " + hostId.toString());
         LevelRule level = getHostLevel(hostId);
         return level.level().getMac();
     }
@@ -867,6 +892,11 @@ public class LevelManager implements LevelService {
     @Override
     public HostInfo getHostInfo(HostId hostId) {
         return hostStore.getHostInfoById(hostId);
+    }
+
+    @Override
+    public void setHostInfo(HostId hostId, HostInfo info) {
+        hostStore.setHostInfoById(hostId, info);
     }
 
     @Override
