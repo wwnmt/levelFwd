@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width" />
+    <title>NFV Monitor</title>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"></script>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" rel="stylesheet" />
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/bootstrap-table.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/bootstrap-table.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/locale/bootstrap-table-zh-CN.min.js"></script>
+</head>
+<body>
+<div class="container-fluid">
+    <h1 class='text-center'>安全中间盒网络监测</h1>
+    <div class="row">
+        <div class="col-2">
+            <ul class="list-group">
+                <li class="list-group-item"><a href="/">用户权限等级</a></li>
+                <li class="list-group-item"><a href="/middlebox">安全中间盒设定</a></li>
+                <li class="list-group-item"><a href="/stat">首报文检测</a></li>
+                <li class="list-group-item"><a href="/alert">攻击预警信息</a></li>
+            </ul>
+        </div>
+        <div class="col">
+            <table id="table"></table>
+        </div>
+        
+    </div>
+    
+</div>
+
+
+<script type="text/javascript">
+    function click2() {
+        $('#table').bootstrapTable({
+            url: '/data3',
+            dataType: "json",
+            pagination: true,
+            striped: true, 
+            cache: false, 
+            pageNumber: 1,
+            pageSize: 10, 
+            pageList: [10, 20, 50, 100], 
+            showRefresh: false, 
+            minimumCountColumns: 2, 
+            clickToSelect: true, 
+            height: 500, 
+            uniqueId: "code", 
+            showToggle: false, 
+            cardView: false,
+            detailView: true, 
+            sidePagination: "server", 
+            // {"tcp_flags": 0, "tcp_ack": 0, "nw_dst": "10.1.0.3", "dl_src": "00:00:00:00:01:00", "nw_src": "192.168.1.101", "vlan_id": -1, "src_port": "0", "nw_length": 84, "no": 1582882, "tcp_seq": 0, "nw_proto": "1", "dst_port": "0", "dl_dst": "00:00:00:00:02:01"}
+            columns: [{
+                field: 'timestamp',
+                title: '时间',
+                align: 'center', 
+                width: '200px' 
+            }, {
+                field: 'dl_src',
+                title: 'MAC来源地址',
+                align: 'center'
+            }, {
+                field: 'dl_dst',
+                title: 'MAC目的地址',
+                align: 'center',
+
+            }, {
+                field: 'nw_src',
+                title: 'IP来源地址',
+                align: 'center',
+            }, {
+                field: 'nw_dst',
+                title: 'IP目的地址',
+                align: 'center',
+            }, {
+                field: 'src_port',
+                title: '来源端口/ICMP类型',
+                align: 'center',
+            }, {
+                field: 'dst_port',
+                title: '目的端口/ICMP代码',
+                align: 'center',
+            }],
+        });
+    }
+
+    click2();
+
+</script>
+</body>
+</html>

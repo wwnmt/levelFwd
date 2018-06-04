@@ -230,10 +230,6 @@ public class LevelManager implements LevelService {
         if (addrs.isEmpty()) {
             builder.setIp(IpAddress.valueOf("0.0.0.0"));
         } else {
-            if (addrInMiddleBox(host.ipAddresses().iterator().next()))
-            {
-                return;
-            }
             builder.setIp(host.ipAddresses().iterator().next());
         }
 
@@ -248,6 +244,7 @@ public class LevelManager implements LevelService {
         public void event(HostEvent event) {
             log.info("HOST CHANGED!!");
 
+            // FIXME: Handle HOST_UPDATE
             if (event.type() == HostEvent.Type.HOST_ADDED) {
                 addHostDefault(event.subject());
             }
